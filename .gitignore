@@ -1,0 +1,15 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/pat
+pat.so
+pat.dylib
+pat.dll
+pat.a
+pat.lib
+pat-test-*
+*.exe
+*.o
+*.obj
+*.lst

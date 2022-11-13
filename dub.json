@@ -1,0 +1,9 @@
+{
+	"authors": [
+		"Mina Kamel"
+	],
+	"copyright": "Copyright © 2022, Mina Kamel",
+	"description": "A shell",
+	"license": "MIT",
+	"name": "pat"
+}
