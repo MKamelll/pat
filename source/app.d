@@ -9,6 +9,7 @@ void main()
     string src4 = "youtube-dl -g 'https://www.youtube.com/watch?v=nDbeqj-1XOo' &";
     string src5 = "youtube-dl -g 'https://www.youtube.com/watch?v=nDbeqj-1XOo' > out.txt";
     string src6 = "out.txt < youtube-dl -g 'https://www.youtube.com/watch?v=nDbeqj-1XOo'";
-    auto parser = new Parser(src6);
+    string src7 = "youtube-dl -g 'https://www.youtube.com/watch?v=nDbeqj-1XOo' ; neofetch";
+    auto parser = new Parser(src7);
     writeln(parser.parse());
 }

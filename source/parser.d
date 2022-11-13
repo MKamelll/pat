@@ -13,7 +13,7 @@ class Parser
     {
         mSrc = src;
         mCurrIndex = 0;
-        mOperators = ['|', '&', '>', '<'];
+        mOperators = ['|', '&', '>', '<', ';'];
     }
 
     bool isAtEnd()
@@ -76,6 +76,12 @@ class Parser
                     advance();
                     auto rtCommand = parseCommand();
                     return new ParseResult.Redirection(rtCommand, ltCommand);
+                }
+                case ';':
+                {
+                    advance();
+                    auto rtCommand = parseCommand();
+                    return new ParseResult.Sequence(ltCommand, rtCommand);
                 }
                 default: throw new Exception("Not recognized operator '" ~ to!string(curr()) ~ "'");
             }

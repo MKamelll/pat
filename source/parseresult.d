@@ -100,4 +100,22 @@ abstract class ParseResult
             return "Redirection(input: " ~ mInput.toString() ~ ", output: " ~ mOutput.toString() ~ ")";
         }
     }
+
+
+    static class Sequence : ParseResult
+    {
+        private Command mLeftCommand;
+        private Command mRightCommand;
+        this(Command lc, Command rc)
+        {
+            mLeftCommand = lc;
+            mRightCommand = rc;
+        }
+
+        override string toString()
+        {
+            return "Sequence(left: " ~ mLeftCommand.toString()
+                ~ ", right: " ~ mRightCommand.toString() ~ ")";
+        }
+    }
 }
