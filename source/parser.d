@@ -108,10 +108,6 @@ class Parser
         string[] args;
         string currArg;
         while (!isAtEnd()) {
-            if (curr() == '-') {
-                advance();
-                continue;
-            }
             if (curr() == ' ') {
                 args ~= currArg;
                 currArg = "";
