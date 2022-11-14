@@ -13,6 +13,16 @@ abstract class ParseResult
             mArgs = args;
         }
 
+        string processName()
+        {
+            return mProcessName;
+        }
+
+        string[] args()
+        {
+            return mArgs;
+        }
+
         override string toString()
         {
             return "Command(ps: '" ~ mProcessName ~ "', args: " ~ to!string(mArgs);
