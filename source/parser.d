@@ -47,11 +47,11 @@ class Parser
                     advance();
                     if (!isAtEnd() && curr() == '|') {
                         advance();
-                        auto rtCommand = parseCommand();
+                        auto rtCommand = parse();
                         return new ParseResult.Or(ltCommand, rtCommand);
                     }
 
-                    auto rtCommand = parseCommand();
+                    auto rtCommand = parse();
                     return new ParseResult.Pipe(ltCommand, rtCommand);
                 }
                 case '&':
@@ -59,7 +59,7 @@ class Parser
                     advance();
                     if (!isAtEnd() && curr() == '&') {
                         advance();
-                        auto rtCommand = parseCommand();
+                        auto rtCommand = parse();
                         return new ParseResult.And(ltCommand, rtCommand);
                     }
 
@@ -68,19 +68,19 @@ class Parser
                 case '>':
                 {
                     advance();
-                    auto rtCommand = parseCommand();
-                    return new ParseResult.Redirection(ltCommand, rtCommand);
+                    auto rtCommand = parse();
+                    return new ParseResult.LRRedirection(ltCommand, rtCommand);
                 }
                 case '<':
                 {
                     advance();
-                    auto rtCommand = parseCommand();
-                    return new ParseResult.Redirection(rtCommand, ltCommand);
+                    auto rtCommand = parse();
+                    return new ParseResult.RLRedirection(rtCommand, ltCommand);
                 }
                 case ';':
                 {
                     advance();
-                    auto rtCommand = parseCommand();
+                    auto rtCommand = parse();
                     return new ParseResult.Sequence(ltCommand, rtCommand);
                 }
                 default: throw new Exception("Not recognized operator '" ~ to!string(curr()) ~ "'");
@@ -108,6 +108,10 @@ class Parser
         string[] args;
         string currArg;
         while (!isAtEnd()) {
+            if (curr() == '\'' || curr() == '"') {
+                advance();
+                continue;
+            }
             if (curr() == ' ') {
                 args ~= currArg;
                 currArg = "";
