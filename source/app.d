@@ -1,21 +1,37 @@
 import std.stdio;
 import parser;
 import interpreter;
+import std.process;
+import std.string;
+import core.stdc.stdlib;
 
 void main()
 {
-	string src1 = "youtube-dl -g 'https://www.youtube.com/watch?v=nDbeqj-1XOo'";
-    string src2 = "youtube-dl -gx 'https://soundcloud.com/aofathy/3alameen' | xargs vlc";
-    string src3 = "youtube-dl -g 'https://www.youtube.com/watch?v=nDbeqj-1XOo' && neofetch";
-    string src4 = "youtube-dl -g 'https://www.youtube.com/watch?v=nDbeqj-1XOo' &";
-    string src5 = "youtube-dl -g 'https://www.youtube.com/watch?v=nDbeqj-1XOo' > out.txt";
-    string src6 = "out.txt < youtube-dl -g 'https://www.youtube.com/watch?v=nDbeqj-1XOo'";
-    string src7 = "youtube-dl -g 'https://www.youtube.com/watch?v=nDbeqj-1XOo' ; neofetch";
-    string src8 = "neofetch";
-    string src9 = "gcc";
-    string src10 = "echo 'hello' | wc -l";
-    string src11 = "echo 'hello' | grep --color=always 'he' | wc -l | xargs echo 'Number of lines is: '";
-    auto parser = new Parser(src2);
-    auto interpreter = new Interpreter(parser.parse());
-    interpreter.interpret();
+    string userName;
+    auto pipe = pipeProcess("whoami");
+    foreach (line; pipe.stdout.byLine) userName ~= line;
+    
+    string hostName;
+    pipe = pipeProcess("hostname");
+    foreach (line; pipe.stdout.byLine) hostName ~= line;
+    
+    auto userInfo = userName ~ "@" ~ hostName;
+    
+    while (true) {
+        write(userInfo ~ "> ");
+        
+        string line;
+        if ((line = readln()) !is null) {
+            line = line.strip();
+            if (line == "exit") exit(0);
+        }
+        
+        try {
+            auto parser = new Parser(line);
+            auto interpreter = new Interpreter(parser.parse());
+            interpreter.interpret();
+        } catch (Exception ex) {
+            writeln(ex.msg);
+        }
+    }
 }
