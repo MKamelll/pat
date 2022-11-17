@@ -186,12 +186,22 @@ abstract class ParseResult
 
     static class RLRedirection : ParseResult
     {
-        private ParseResult mInput;
-        private Command mOutput;
-        this(ParseResult input, Command output)
+        private ParseResult mOutput;
+        private Command mInput;
+        this(ParseResult output, Command input)
         {
-            mInput = input;
             mOutput = output;
+            mInput = input;
+        }
+
+        Command leftCommand()
+        {
+            return mInput;
+        }
+
+        ParseResult rightCommand()
+        {
+            return mOutput;
         }
 
         override void accept(Visitor v)

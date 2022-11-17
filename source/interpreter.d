@@ -79,9 +79,17 @@ class Interpreter : Visitor
         }
     }
 
-    void visit(ParseResult.RLRedirection v)
+    void visit(ParseResult.RLRedirection rlRedirection)
     {
-
+        if (ParseResult.Command command = cast(ParseResult.Command) rlRedirection.leftCommand()) {
+            string name = command.processName();
+            auto f = new File(name, "w");
+            if (f !is null) {
+                mCurrStdout = *f;
+            }
+            rlRedirection.rightCommand().accept(this);
+            mCurrStdout = stdout;
+        }
     }
 
     void visit(ParseResult.Sequence seqCommand)
