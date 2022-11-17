@@ -31,6 +31,12 @@ void main()
             auto parser = new Parser(line);
             auto interpreter = new Interpreter(parser.parse());
             interpreter.interpret();
+
+            if (interpreter.recievedSigInt()) {
+                interpreter.killStartedProcess();
+                continue;
+            }
+
         } catch (Exception ex) {
             writeln(ex.msg);
         }

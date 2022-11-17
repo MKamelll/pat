@@ -6,6 +6,7 @@ import visitor;
 import std.process;
 import std.stdio;
 import std.conv;
+import core.sys.posix.signal;
 
 class Interpreter : Visitor
 {
@@ -16,6 +17,7 @@ class Interpreter : Visitor
     private int mCurrStatus;
     private bool mDetached;
     private Pid mStartedPid;
+    private int mSignalTermination;
     this(ParseResult result)
     {
         mParseResult = result;
@@ -24,6 +26,12 @@ class Interpreter : Visitor
         mCurrStderr = stderr;
         mCurrStatus = 0;
         mDetached = false;
+        mSignalTermination = -1;
+    }
+
+    bool recievedSigInt()
+    {
+        return mSignalTermination == SIGINT;
     }
 
     void interpret()
@@ -40,6 +48,7 @@ class Interpreter : Visitor
             mStartedPid = pid;
             scope(exit) {
                 mCurrStatus = wait(pid);
+                if (mCurrStatus < 0) mSignalTermination = mCurrStatus * -1;
             }   
         } else {
             pid = spawnProcess(payload, mCurrStdin, mCurrStdout, mCurrStderr, null, Config.detached);
@@ -110,5 +119,10 @@ class Interpreter : Visitor
     {
         seqCommand.leftCommand().accept(this);
         seqCommand.rightCommand().accept(this);
+    }
+
+    void killStartedProcess()
+    {
+        kill(mStartedPid);
     }
 }
