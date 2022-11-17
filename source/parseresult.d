@@ -163,6 +163,16 @@ abstract class ParseResult
             mOutput = output;
         }
 
+        Command leftCommand()
+        {
+            return mInput;
+        }
+
+        ParseResult rightCommand()
+        {
+            return mOutput;
+        }
+
         override void accept(Visitor v)
         {
             v.visit(this);

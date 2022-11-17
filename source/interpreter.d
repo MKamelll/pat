@@ -66,9 +66,17 @@ class Interpreter : Visitor
         if (mCurrStatus != 0) orCommand.rightCommand().accept(this);
     }
     
-    void visit(ParseResult.LRRedirection v)
+    void visit(ParseResult.LRRedirection lrRedirection)
     {
-
+        if (ParseResult.Command command = cast(ParseResult.Command) lrRedirection.rightCommand()) {
+            string name = command.processName();
+            auto f = new File(name, "w");
+            if (f !is null) {
+                mCurrStdout = *f;
+            }
+            lrRedirection.leftCommand().accept(this);
+            mCurrStdout = stdout;
+        }
     }
 
     void visit(ParseResult.RLRedirection v)
