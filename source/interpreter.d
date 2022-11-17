@@ -12,12 +12,14 @@ class Interpreter : Visitor
     private File mCurrStdin;
     private File mCurrStdout;
     private File mCurrStderr;
+    private int mCurrStatus;
     this(ParseResult result)
     {
         mParseResult = result;
         mCurrStdin = stdin;
         mCurrStdout = stdout;
         mCurrStderr = stderr;
+        mCurrStatus = 0;
     }
 
     void interpret()
@@ -29,7 +31,9 @@ class Interpreter : Visitor
     {
         auto payload = command.processName() ~ command.args();
         auto pid = spawnProcess(payload, mCurrStdin, mCurrStdout, mCurrStderr);
-        scope(exit) wait(pid);        
+        scope(exit) {
+            mCurrStatus = wait(pid);
+        }        
     }
 
     void visit(ParseResult.Pipe pipe)
@@ -45,9 +49,10 @@ class Interpreter : Visitor
         mCurrStdin = stdin;
     }
 
-    void visit(ParseResult.And v)
+    void visit(ParseResult.And andCommand)
     {
-
+        andCommand.leftCommand().accept(this);
+        if (mCurrStatus == 0) andCommand.rightCommand().accept(this);
     }
 
     void visit(ParseResult.BackGroundProcess v)
@@ -55,9 +60,10 @@ class Interpreter : Visitor
 
     }
 
-    void visit(ParseResult.Or v)
+    void visit(ParseResult.Or orCommand)
     {
-
+        orCommand.leftCommand().accept(this);
+        if (mCurrStatus != 0) orCommand.rightCommand().accept(this);
     }
     
     void visit(ParseResult.LRRedirection v)
@@ -65,14 +71,14 @@ class Interpreter : Visitor
 
     }
 
-
     void visit(ParseResult.RLRedirection v)
     {
 
     }
 
-    void visit(ParseResult.Sequence v)
+    void visit(ParseResult.Sequence seqCommand)
     {
-        
+        seqCommand.leftCommand().accept(this);
+        seqCommand.rightCommand().accept(this);
     }
 }

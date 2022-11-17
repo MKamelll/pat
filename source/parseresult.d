@@ -79,6 +79,16 @@ abstract class ParseResult
             mLeftCommand = lc;
             mRightCommand = rc;
         }
+
+        Command leftCommand()
+        {
+            return mLeftCommand;
+        }
+
+        ParseResult rightCommand()
+        {
+            return mRightCommand;
+        }
         
         override void accept(Visitor v)
         {
@@ -100,6 +110,16 @@ abstract class ParseResult
         {
             mLeftCommand = lc;
             mRightCommand = rc;
+        }
+
+        Command leftCommand()
+        {
+            return mLeftCommand;
+        }
+
+        ParseResult rightCommand()
+        {
+            return mRightCommand;
         }
 
         override void accept(Visitor v)
@@ -183,6 +203,16 @@ abstract class ParseResult
         {
             mLeftCommand = lc;
             mRightCommand = rc;
+        }
+
+        Command leftCommand()
+        {
+            return mLeftCommand;
+        }
+
+        ParseResult rightCommand()
+        {
+            return mRightCommand;
         }
 
         override void accept(Visitor v)
