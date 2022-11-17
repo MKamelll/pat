@@ -5,6 +5,7 @@ import visitor;
 
 import std.process;
 import std.stdio;
+import std.conv;
 
 class Interpreter : Visitor
 {
@@ -13,6 +14,8 @@ class Interpreter : Visitor
     private File mCurrStdout;
     private File mCurrStderr;
     private int mCurrStatus;
+    private bool mDetached;
+    private Pid mStartedPid;
     this(ParseResult result)
     {
         mParseResult = result;
@@ -20,6 +23,7 @@ class Interpreter : Visitor
         mCurrStdout = stdout;
         mCurrStderr = stderr;
         mCurrStatus = 0;
+        mDetached = false;
     }
 
     void interpret()
@@ -30,10 +34,17 @@ class Interpreter : Visitor
     void visit(ParseResult.Command command)
     {
         auto payload = command.processName() ~ command.args();
-        auto pid = spawnProcess(payload, mCurrStdin, mCurrStdout, mCurrStderr);
-        scope(exit) {
-            mCurrStatus = wait(pid);
-        }        
+        Pid pid;
+        if (!mDetached) {
+            pid = spawnProcess(payload, mCurrStdin, mCurrStdout, mCurrStderr);
+            mStartedPid = pid;
+            scope(exit) {
+                mCurrStatus = wait(pid);
+            }   
+        } else {
+            pid = spawnProcess(payload, mCurrStdin, mCurrStdout, mCurrStderr, null, Config.detached);
+            mStartedPid = pid;
+        }
     }
 
     void visit(ParseResult.Pipe pipe)
@@ -55,9 +66,12 @@ class Interpreter : Visitor
         if (mCurrStatus == 0) andCommand.rightCommand().accept(this);
     }
 
-    void visit(ParseResult.BackGroundProcess v)
+    void visit(ParseResult.BackGroundProcess command)
     {
-
+        mDetached = true;
+        command.command().accept(this);
+        writeln("Started '" ~ to!string(mStartedPid.processID()) ~ "' in the background");
+        mDetached = false;
     }
 
     void visit(ParseResult.Or orCommand)

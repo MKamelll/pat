@@ -142,6 +142,11 @@ abstract class ParseResult
             mCommand = cmd;
         }
 
+        ParseResult command()
+        {
+            return mCommand;
+        }
+
         override void accept(Visitor v)
         {
             v.visit(this);
