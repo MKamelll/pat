@@ -24,6 +24,7 @@ void main()
         if ((line = readln()) !is null) {
             line = line.strip();
             if (line == "exit") exit(0);
+            if (line.length < 1) continue;
         }
         
         try {
