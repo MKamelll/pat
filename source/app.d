@@ -1,11 +1,12 @@
 import std.stdio;
 import parser;
 import interpreter;
+
 import std.process;
 import std.string;
 import core.stdc.stdlib;
 
-void main()
+string getPrompt()
 {
     string userName;
     auto pipe = pipeProcess("whoami");
@@ -15,28 +16,36 @@ void main()
     pipe = pipeProcess("hostname");
     foreach (line; pipe.stdout.byLine) hostName ~= line;
     
-    auto userInfo = userName ~ "@" ~ hostName;
+    return userName ~ "@" ~ hostName;
+}
+
+void main()
+{
     
+    string prompt = getPrompt();
+
     while (true) {
-        write(userInfo ~ "> ");
         
+        if (isSigInt) {
+            isSigInt = false;
+            continue;
+        }
+
+        write(prompt ~ "> ");
+
         string line;
         if ((line = readln()) !is null) {
             line = line.strip();
             if (line == "exit") exit(0);
             if (line.length < 1) continue;
+        } else {
+            exit(0);
         }
         
         try {
             auto parser = new Parser(line);
             auto interpreter = new Interpreter(parser.parse());
             interpreter.interpret();
-
-            if (interpreter.recievedSigInt()) {
-                interpreter.killStartedProcess();
-                continue;
-            }
-
         } catch (Exception ex) {
             writeln(ex.msg);
         }

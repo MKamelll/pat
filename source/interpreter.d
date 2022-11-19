@@ -8,6 +8,9 @@ import std.stdio;
 import std.conv;
 import core.sys.posix.signal;
 
+bool isSigInt = false;
+extern (C) void sigIntHandler(int sig) nothrow @nogc @system { isSigInt = true; }
+
 class Interpreter : Visitor
 {
     private ParseResult mParseResult;
@@ -27,11 +30,7 @@ class Interpreter : Visitor
         mCurrStatus = 0;
         mDetached = false;
         mSignalTermination = -1;
-    }
-
-    bool recievedSigInt()
-    {
-        return mSignalTermination == SIGINT;
+        signal(SIGINT, &sigIntHandler);
     }
 
     void interpret()
@@ -46,10 +45,8 @@ class Interpreter : Visitor
         if (!mDetached) {
             pid = spawnProcess(payload, mCurrStdin, mCurrStdout, mCurrStderr);
             mStartedPid = pid;
-            scope(exit) {
-                mCurrStatus = wait(pid);
-                if (mCurrStatus < 0) mSignalTermination = mCurrStatus * -1;
-            }   
+            mCurrStatus = wait(mStartedPid);
+            if (mCurrStatus < 0) mSignalTermination = mCurrStatus * -1;
         } else {
             pid = spawnProcess(payload, mCurrStdin, mCurrStdout, mCurrStderr, null, Config.detached);
             mStartedPid = pid;
@@ -119,10 +116,5 @@ class Interpreter : Visitor
     {
         seqCommand.leftCommand().accept(this);
         seqCommand.rightCommand().accept(this);
-    }
-
-    void killStartedProcess()
-    {
-        kill(mStartedPid);
     }
 }
