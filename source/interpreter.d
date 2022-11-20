@@ -17,7 +17,7 @@ class Interpreter : Visitor
     private File mCurrStderr;
     private int mCurrStatus;
     private bool mDetached;
-    private Pid mStartedPid;
+    private pid_t mStartedPid;
     private int mSignalTermination;
     this(ParseResult result)
     {
@@ -37,8 +37,9 @@ class Interpreter : Visitor
 
     void visit(ParseResult.Command command)
     {
-        auto psm = new ProcessManager(command);
-        psm.exec();
+        auto psm = new ProcessManager(command, mDetached);
+        mStartedPid = psm.exec();
+        if (!mDetached) mCurrStatus = psm.status();
         /*
         auto payload = command.processName() ~ command.args();
         Pid pid;
@@ -77,7 +78,7 @@ class Interpreter : Visitor
     {
         mDetached = true;
         command.command().accept(this);
-        writeln("Started '" ~ to!string(mStartedPid.processID()) ~ "' in the background");
+        writeln("Started '" ~ to!string(mStartedPid) ~ "' in the background");
         mDetached = false;
     }
 
