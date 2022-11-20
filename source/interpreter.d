@@ -2,14 +2,12 @@ module interpreter;
 
 import parseresult : ParseResult;
 import visitor;
+import processmanager;
 
 import std.process;
 import std.stdio;
 import std.conv;
 import core.sys.posix.signal;
-
-bool isSigInt = false;
-extern (C) void sigIntHandler(int sig) nothrow @nogc @system { isSigInt = true; }
 
 class Interpreter : Visitor
 {
@@ -30,7 +28,6 @@ class Interpreter : Visitor
         mCurrStatus = 0;
         mDetached = false;
         mSignalTermination = -1;
-        signal(SIGINT, &sigIntHandler);
     }
 
     void interpret()
@@ -40,6 +37,9 @@ class Interpreter : Visitor
 
     void visit(ParseResult.Command command)
     {
+        auto psm = new ProcessManager(command);
+        psm.exec();
+        /*
         auto payload = command.processName() ~ command.args();
         Pid pid;
         if (!mDetached) {
@@ -51,6 +51,7 @@ class Interpreter : Visitor
             pid = spawnProcess(payload, mCurrStdin, mCurrStdout, mCurrStderr, null, Config.detached);
             mStartedPid = pid;
         }
+        */
     }
 
     void visit(ParseResult.Pipe pipe)

@@ -21,15 +21,9 @@ string getPrompt()
 
 void main()
 {
-    
     string prompt = getPrompt();
 
     while (true) {
-        
-        if (isSigInt) {
-            isSigInt = false;
-            continue;
-        }
 
         write(prompt ~ "> ");
 
