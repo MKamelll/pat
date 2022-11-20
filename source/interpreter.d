@@ -18,7 +18,6 @@ class Interpreter : Visitor
     private int mCurrStatus;
     private bool mDetached;
     private pid_t mStartedPid;
-    private int mSignalTermination;
     this(ParseResult result)
     {
         mParseResult = result;
@@ -27,7 +26,6 @@ class Interpreter : Visitor
         mCurrStderr = stderr;
         mCurrStatus = 0;
         mDetached = false;
-        mSignalTermination = -1;
     }
 
     void interpret()
@@ -37,7 +35,7 @@ class Interpreter : Visitor
 
     void visit(ParseResult.Command command)
     {
-        auto psm = new ProcessManager(command, mDetached);
+        auto psm = new ProcessManager(command, mCurrStdin, mCurrStdout, mCurrStderr, mDetached);
         mStartedPid = psm.exec();
         if (!mDetached) mCurrStatus = psm.status();
         /*

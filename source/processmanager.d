@@ -10,15 +10,22 @@ import core.stdc.errno;
 
 class ProcessManager
 {
-    ParseResult.Command mCommand;
-    pid_t mStartedPid;
-    int mCurrStatus;
-    bool mDetached;
-    this(ParseResult.Command command, bool isDetached = false)
+    private ParseResult.Command mCommand;
+    private pid_t mStartedPid;
+    private int mCurrStatus;
+    private bool mDetached;
+    private File mCurrStdin;
+    private File mCurrStdout;
+    private File mCurrStderr;
+    this(ParseResult.Command command,
+        File stdIn, File stdOut, File stdErr, bool isDetached = false)
     {
         mCommand = command;
-        mDetached = isDetached;
         mCurrStatus = 0;
+        mCurrStdin = stdIn;
+        mCurrStdout = stdOut;
+        mCurrStderr = stdErr;
+        mDetached = isDetached;
     }
 
     int status()
@@ -36,6 +43,16 @@ class ProcessManager
         signal(SIGTTIN, SIG_IGN);
 
         if (cpid == 0) {
+            if (mCurrStdout != stdout) {
+                dup2(mCurrStdout.fileno(), STDOUT_FILENO);
+                close(mCurrStdout.fileno());
+            }
+
+            if (mCurrStdin != stdin) {
+                dup2(mCurrStdin.fileno(), STDIN_FILENO);
+                close(mCurrStdin.fileno());
+            }
+
             setpgid(0, 0);
             if (!mDetached) tcsetpgrp(0, getpid());
             auto psName = mCommand.processName().toStringz();
@@ -51,6 +68,14 @@ class ProcessManager
             _exit(errno());
         } else if (cpid > 0) {
             mStartedPid = cpid;
+        }
+
+        if (mCurrStdout != stdout) {
+            close(mCurrStdout.fileno());
+        }
+
+        if (mCurrStdin != stdin) {
+            close(mCurrStdin.fileno());
         }
         
         setpgid(cpid, cpid);
