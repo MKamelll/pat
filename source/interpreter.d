@@ -30,7 +30,6 @@ class Interpreter : Visitor
 
     void interpret()
     {
-        writeln(mParseResult);
         mParseResult.accept(this);
     }
 
