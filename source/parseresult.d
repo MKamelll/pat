@@ -33,7 +33,7 @@ abstract class ParseResult
 
         override string toString()
         {
-            return "Command(ps: '" ~ mProcessName ~ "', args: " ~ to!string(mArgs);
+            return "Command(ps: '" ~ mProcessName ~ "', args: " ~ to!string(mArgs) ~ ")";
         }
     }
 

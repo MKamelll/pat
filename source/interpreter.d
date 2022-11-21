@@ -30,6 +30,7 @@ class Interpreter : Visitor
 
     void interpret()
     {
+        writeln(mParseResult);
         mParseResult.accept(this);
     }
 
@@ -38,19 +39,6 @@ class Interpreter : Visitor
         auto psm = new ProcessManager(command, mCurrStdin, mCurrStdout, mCurrStderr, mDetached);
         mStartedPid = psm.exec();
         if (!mDetached) mCurrStatus = psm.status();
-        /*
-        auto payload = command.processName() ~ command.args();
-        Pid pid;
-        if (!mDetached) {
-            pid = spawnProcess(payload, mCurrStdin, mCurrStdout, mCurrStderr);
-            mStartedPid = pid;
-            mCurrStatus = wait(mStartedPid);
-            if (mCurrStatus < 0) mSignalTermination = mCurrStatus * -1;
-        } else {
-            pid = spawnProcess(payload, mCurrStdin, mCurrStdout, mCurrStderr, null, Config.detached);
-            mStartedPid = pid;
-        }
-        */
     }
 
     void visit(ParseResult.Pipe pipe)

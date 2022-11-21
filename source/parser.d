@@ -48,10 +48,19 @@ class Parser
                     if (!isAtEnd() && curr() == '|') {
                         advance();
                         auto rtCommand = parse();
+                        // a hack for precedence issues
+                        if ((rtCommand = cast(ParseResult.BackGroundProcess) rtCommand) !is null) {
+                            rtCommand = (cast(ParseResult.BackGroundProcess) rtCommand).command();
+                            return new ParseResult.BackGroundProcess(new ParseResult.Or(ltCommand, rtCommand));
+                        }
                         return new ParseResult.Or(ltCommand, rtCommand);
                     }
 
                     auto rtCommand = parse();
+                    if ((rtCommand = cast(ParseResult.BackGroundProcess) rtCommand) !is null) {
+                        rtCommand = (cast(ParseResult.BackGroundProcess) rtCommand).command();
+                        return new ParseResult.BackGroundProcess(new ParseResult.Pipe(ltCommand, rtCommand));
+                    }
                     return new ParseResult.Pipe(ltCommand, rtCommand);
                 }
                 case '&':
@@ -60,6 +69,10 @@ class Parser
                     if (!isAtEnd() && curr() == '&') {
                         advance();
                         auto rtCommand = parse();
+                        if ((rtCommand = cast(ParseResult.BackGroundProcess) rtCommand) !is null) {
+                            rtCommand = (cast(ParseResult.BackGroundProcess) rtCommand).command();
+                            return new ParseResult.BackGroundProcess(new ParseResult.And(ltCommand, rtCommand));
+                        }
                         return new ParseResult.And(ltCommand, rtCommand);
                     }
 
@@ -69,18 +82,30 @@ class Parser
                 {
                     advance();
                     auto rtCommand = parse();
+                    if ((rtCommand = cast(ParseResult.BackGroundProcess) rtCommand) !is null) {
+                        rtCommand = (cast(ParseResult.BackGroundProcess) rtCommand).command();
+                        return new ParseResult.BackGroundProcess(new ParseResult.LRRedirection(ltCommand, rtCommand));
+                    }
                     return new ParseResult.LRRedirection(ltCommand, rtCommand);
                 }
                 case '<':
                 {
                     advance();
                     auto rtCommand = parse();
+                    if ((rtCommand = cast(ParseResult.BackGroundProcess) rtCommand) !is null) {
+                        rtCommand = (cast(ParseResult.BackGroundProcess) rtCommand).command();
+                        return new ParseResult.BackGroundProcess(new ParseResult.RLRedirection(rtCommand, ltCommand));
+                    }
                     return new ParseResult.RLRedirection(rtCommand, ltCommand);
                 }
                 case ';':
                 {
                     advance();
                     auto rtCommand = parse();
+                    if ((rtCommand = cast(ParseResult.BackGroundProcess) rtCommand) !is null) {
+                        rtCommand = (cast(ParseResult.BackGroundProcess) rtCommand).command();
+                        return new ParseResult.BackGroundProcess(new ParseResult.Sequence(ltCommand, rtCommand));
+                    }
                     return new ParseResult.Sequence(ltCommand, rtCommand);
                 }
                 default: throw new Exception("Not recognized operator '" ~ to!string(curr()) ~ "'");
