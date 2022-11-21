@@ -5,6 +5,17 @@ import interpreter;
 import std.process;
 import std.string;
 import core.stdc.stdlib;
+import core.stdc.string;
+import std.string;
+import std.conv;
+
+extern (C) {
+    char * readline(const char *);
+    void add_history(const char*);
+}
+
+alias readLine = readline;
+alias addHistory = add_history;
 
 string getPrompt()
 {
@@ -25,23 +36,23 @@ void main()
 
     while (true) {
 
-        write(prompt ~ "> ");
-
-        string line;
-        if ((line = readln()) !is null) {
-            line = line.strip();
-            if (line == "exit") exit(0);
-            if (line.length < 1) continue;
+        char * line;
+        if ((line = readLine(toStringz(prompt ~ "> "))) !is null) {
+            if (strcmp(line, "exit") == 0) exit(0);
+            if (strlen(line) < 1) continue;
+            add_history(line);
         } else {
             exit(0);
         }
         
         try {
-            auto parser = new Parser(line);
+            auto parser = new Parser(to!string(line));
             auto interpreter = new Interpreter(parser.parse());
             interpreter.interpret();
         } catch (Exception ex) {
             writeln(ex.msg);
+        } finally {
+            free(line);
         }
     }
 }
