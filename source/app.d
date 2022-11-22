@@ -38,11 +38,14 @@ void main()
 
         char * line;
         if ((line = readLine(toStringz(prompt ~ "> "))) !is null) {
-            if (strcmp(line, "exit") == 0) exit(0);
+            if (strcmp(line, "exit") == 0) { 
+                free(line);
+                return;
+            }
             if (strlen(line) < 1) continue;
             add_history(line);
         } else {
-            exit(0);
+            return;
         }
         
         try {
