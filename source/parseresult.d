@@ -147,7 +147,7 @@ abstract class ParseResult
 
         this(ParseResult lc, ParseResult rc)
         {
-            mLeftCommand = cast(ParseResult.Command) lc;
+            mLeftCommand = lc;
             mRightCommand = rc;
         }
 
@@ -252,13 +252,13 @@ abstract class ParseResult
 
         this(ParseResult lc, ParseResult rc)
         {
-            mLeftCommand = cast(ParseResult.Command) lc;
+            mLeftCommand = lc;
             mRightCommand = rc.nullable;
         }
 
         this(ParseResult lc)
         {
-            mLeftCommand = cast(ParseResult.Command) lc;
+            mLeftCommand = lc;
         }
 
         ParseResult leftCommand()
