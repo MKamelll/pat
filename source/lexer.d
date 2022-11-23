@@ -38,13 +38,9 @@ class Token
         return mLexeme;
     }
 
-    string[] args()
+    Nullable!(string[]) args()
     {
-        if (!mArgs.isNull) {
-            return mArgs.get;
-        }
-
-        throw new Exception("Trying to get args of a token '" ~ mLexeme ~ "' that doesn't support args");
+        return mArgs;
     }
 
     override string toString()

@@ -138,7 +138,7 @@ class Parser
     {
         if (isAtEnd()) return Nullable!ParseResult.init;
         if (curr().type() == TokenType.COMMAND) {
-            ParseResult command = new ParseResult.Command(curr().lexeme(), curr().args());
+            ParseResult command = new ParseResult.Command(curr().lexeme(), curr().args().get());
             advance();
             return command.nullable;
         }
