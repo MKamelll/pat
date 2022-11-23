@@ -62,9 +62,10 @@ class Interpreter : Visitor
     void visit(ParseResult.BackGroundProcess command)
     {
         mDetached = true;
-        command.command().accept(this);
+        command.leftCommand().accept(this);
         writeln("Started '" ~ to!string(mStartedPid) ~ "' in the background");
         mDetached = false;
+        if (!command.rightCommand().isNull) command.rightCommand().get().accept(this);
     }
 
     void visit(ParseResult.Or orCommand)
@@ -102,6 +103,6 @@ class Interpreter : Visitor
     void visit(ParseResult.Sequence seqCommand)
     {
         seqCommand.leftCommand().accept(this);
-        seqCommand.rightCommand().accept(this);
+        if (!seqCommand.rightCommand().isNull) seqCommand.rightCommand().get().accept(this);
     }
 }

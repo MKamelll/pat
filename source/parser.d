@@ -1,24 +1,38 @@
 module parser;
+
 import parseresult;
+import lexer;
+
 import std.conv;
 import std.ascii;
 import std.algorithm;
+import std.typecons;
+import std.stdio;
+
+enum Associativity
+{
+    LEFT, RIGHT
+}
+
+struct OpInfo
+{
+    Associativity assoc;
+    int precdence;
+}
 
 class Parser
 {
-    private string mSrc;
+    private Token[] mTokens;
     private int mCurrIndex;
-    private char[] mOperators;
-    this(string src)
+    this(Token[] tokens)
     {
-        mSrc = src;
+        mTokens = tokens;
         mCurrIndex = 0;
-        mOperators = ['|', '&', '>', '<', ';'];
     }
 
     bool isAtEnd()
     {
-        return mCurrIndex >= mSrc.length;
+        return mCurrIndex >= mTokens.length;
     }
 
     void advance()
@@ -26,131 +40,109 @@ class Parser
         mCurrIndex++;
     }
 
-    char curr()
+    Token curr()
     {
-        return mSrc[mCurrIndex];
+        return mTokens[mCurrIndex];
     }
 
-    char prev()
+    Token prev()
     {
-        return mSrc[mCurrIndex-1];
+        return mTokens[mCurrIndex-1];
+    }
+
+    OpInfo getOpInfo(string op)
+    {
+        switch (op)
+        {
+            case "|": return OpInfo(Associativity.LEFT, 2);
+            case "||": return OpInfo(Associativity.LEFT, 2);
+            case "&": return OpInfo(Associativity.LEFT, 1);
+            case "&&": return OpInfo(Associativity.LEFT, 2);
+            case ";": return OpInfo(Associativity.LEFT, 2);
+            case "<": return OpInfo(Associativity.LEFT, 2);
+            case ">": return OpInfo(Associativity.LEFT, 2);
+            default: break; 
+        }
+
+        throw new Exception("Operator '" ~ op ~ "' is not supported");
     }
 
     ParseResult parse()
     {
+        return _parse().get();
+    }
+
+    Nullable!ParseResult _parse(int minPrecedence = 0) {
         auto ltCommand = parseCommand();
 
-        if (!isAtEnd()) {
-            switch (curr()) {
-                case '|':
+        while (!isAtEnd()) {
+            auto op = curr().lexeme();
+            auto opInfo = getOpInfo(op);
+
+            if (opInfo.precdence < minPrecedence) break;
+
+            int nextMinPrec = opInfo.assoc == Associativity.LEFT ? opInfo.precdence + 1 : opInfo.precdence;
+            
+            advance();
+            auto rtCommand = _parse(nextMinPrec);
+
+            switch (op) {
+                case "|": 
                 {
-                    advance();
-                    if (!isAtEnd() && curr() == '|') {
-                        advance();
-                        auto rtCommand = parse();
-                        // a hack for precedence issues
-                        if ((rtCommand = cast(ParseResult.BackGroundProcess) rtCommand) !is null) {
-                            rtCommand = (cast(ParseResult.BackGroundProcess) rtCommand).command();
-                            return new ParseResult.BackGroundProcess(new ParseResult.Or(ltCommand, rtCommand));
-                        }
-                        return new ParseResult.Or(ltCommand, rtCommand);
+                    if (rtCommand.isNull) throw new Exception("Expected a command after '" ~ op ~ "'");
+                    ltCommand = new ParseResult.Pipe(ltCommand.get, rtCommand.get); break;
+                }
+                case "||":
+                {
+                    if (rtCommand.isNull) throw new Exception("Expected a command after '" ~ op ~ "'");
+                    ltCommand = new ParseResult.Or(ltCommand.get, rtCommand.get); break;
+                }
+                case "&&":
+                {
+                    if (rtCommand.isNull) throw new Exception("Expected a command after '" ~ op ~ "'");
+                    ltCommand = new ParseResult.And(ltCommand.get, rtCommand.get); break;
+                }
+                case "&":
+                {
+                    if (rtCommand.isNull) {
+                        ltCommand = new ParseResult.BackGroundProcess(ltCommand.get); break;
+                    }
+                    ltCommand = new ParseResult.BackGroundProcess(ltCommand.get, rtCommand.get); break;
+                }
+                case ";":
+                {
+                    if (rtCommand.isNull) {
+                        ltCommand = new ParseResult.Sequence(ltCommand.get); break;
                     }
 
-                    auto rtCommand = parse();
-                    if ((rtCommand = cast(ParseResult.BackGroundProcess) rtCommand) !is null) {
-                        rtCommand = (cast(ParseResult.BackGroundProcess) rtCommand).command();
-                        return new ParseResult.BackGroundProcess(new ParseResult.Pipe(ltCommand, rtCommand));
-                    }
-                    return new ParseResult.Pipe(ltCommand, rtCommand);
+                    ltCommand = new ParseResult.Sequence(ltCommand.get, rtCommand.get); break;
                 }
-                case '&':
+                case "<":
+                {   
+                    if (rtCommand.isNull) throw new Exception("Expected a command after '" ~ op ~ "'");
+                    ltCommand = new ParseResult.RLRedirection(ltCommand.get, rtCommand.get); break;
+                }
+                case ">":
                 {
-                    advance();
-                    if (!isAtEnd() && curr() == '&') {
-                        advance();
-                        auto rtCommand = parse();
-                        if ((rtCommand = cast(ParseResult.BackGroundProcess) rtCommand) !is null) {
-                            rtCommand = (cast(ParseResult.BackGroundProcess) rtCommand).command();
-                            return new ParseResult.BackGroundProcess(new ParseResult.And(ltCommand, rtCommand));
-                        }
-                        return new ParseResult.And(ltCommand, rtCommand);
-                    }
-
-                    return new ParseResult.BackGroundProcess(ltCommand);
+                    if (rtCommand.isNull) throw new Exception("Expected a command after '" ~ op ~ "'");
+                    ltCommand = new ParseResult.LRRedirection(ltCommand.get, rtCommand.get); break;
                 }
-                case '>':
-                {
-                    advance();
-                    auto rtCommand = parse();
-                    if ((rtCommand = cast(ParseResult.BackGroundProcess) rtCommand) !is null) {
-                        rtCommand = (cast(ParseResult.BackGroundProcess) rtCommand).command();
-                        return new ParseResult.BackGroundProcess(new ParseResult.LRRedirection(ltCommand, rtCommand));
-                    }
-                    return new ParseResult.LRRedirection(ltCommand, rtCommand);
-                }
-                case '<':
-                {
-                    advance();
-                    auto rtCommand = parse();
-                    if ((rtCommand = cast(ParseResult.BackGroundProcess) rtCommand) !is null) {
-                        rtCommand = (cast(ParseResult.BackGroundProcess) rtCommand).command();
-                        return new ParseResult.BackGroundProcess(new ParseResult.RLRedirection(rtCommand, ltCommand));
-                    }
-                    return new ParseResult.RLRedirection(rtCommand, ltCommand);
-                }
-                case ';':
-                {
-                    advance();
-                    auto rtCommand = parse();
-                    if ((rtCommand = cast(ParseResult.BackGroundProcess) rtCommand) !is null) {
-                        rtCommand = (cast(ParseResult.BackGroundProcess) rtCommand).command();
-                        return new ParseResult.BackGroundProcess(new ParseResult.Sequence(ltCommand, rtCommand));
-                    }
-                    return new ParseResult.Sequence(ltCommand, rtCommand);
-                }
-                default: throw new Exception("Not recognized operator '" ~ to!string(curr()) ~ "'");
-            }
+                default: break;
+            } 
         }
 
         return ltCommand;
     }
 
-    ParseResult.Command parseCommand()
+    Nullable!ParseResult parseCommand()
     {
-        // get rid of starting white space
-        while (curr() == ' ') advance();
-        
-        string psName;
-        while (!isAtEnd()) {
-            if (curr() == ' ') break;
-            psName ~= curr();
-            advance();           
-        }
-
-        // pass ' '
-        advance();
-
-        string[] args;
-        string currArg;
-        while (!isAtEnd()) {
-            if (curr() == '\'' || curr() == '"') {
-                advance();
-                continue;
-            }
-            if (curr() == ' ') {
-                args ~= currArg;
-                currArg = "";
-                advance();
-                continue;
-            }
-            if (mOperators.canFind(curr())) break;
-
-            currArg ~= curr();
+        if (isAtEnd()) return Nullable!ParseResult.init;
+        if (curr().type() == TokenType.COMMAND) {
+            ParseResult command = new ParseResult.Command(curr().lexeme(), curr().args());
             advance();
+            return command.nullable;
         }
 
-        if (currArg.length > 0) args ~= currArg;
-
-        return new ParseResult.Command(psName, args);
+        throw new Exception("Expected type command instead got '" ~ curr().lexeme() ~ "'");
     }
 }

@@ -1,6 +1,9 @@
 module parseresult;
-import std.conv;
+
 import visitor;
+
+import std.conv;
+import std.typecons;
 
 abstract class ParseResult
 {
@@ -39,15 +42,16 @@ abstract class ParseResult
 
     static class Pipe : ParseResult
     {
-        private Command mLeftCommand;
+        private ParseResult mLeftCommand;
         private ParseResult mRightCommand;
-        this(Command lc, ParseResult rc)
+
+        this(ParseResult lc, ParseResult rc)
         {
             mLeftCommand = lc;
             mRightCommand = rc;
         }
 
-        Command leftCommand()
+        ParseResult leftCommand()
         {
             return mLeftCommand;
         }
@@ -72,15 +76,16 @@ abstract class ParseResult
 
     static class And : ParseResult
     {
-        private Command mLeftCommand;
+        private ParseResult mLeftCommand;
         private ParseResult mRightCommand;
-        this(Command lc, ParseResult rc)
+
+        this(ParseResult lc, ParseResult rc)
         {
             mLeftCommand = lc;
             mRightCommand = rc;
         }
 
-        Command leftCommand()
+        ParseResult leftCommand()
         {
             return mLeftCommand;
         }
@@ -104,15 +109,16 @@ abstract class ParseResult
 
     static class Or : ParseResult
     {
-        private Command mLeftCommand;
+        private ParseResult mLeftCommand;
         private ParseResult mRightCommand;
-        this(Command lc, ParseResult rc)
+
+        this(ParseResult lc, ParseResult rc)
         {
             mLeftCommand = lc;
             mRightCommand = rc;
         }
 
-        Command leftCommand()
+        ParseResult leftCommand()
         {
             return mLeftCommand;
         }
@@ -136,15 +142,28 @@ abstract class ParseResult
 
     static class BackGroundProcess : ParseResult
     {
-        private ParseResult mCommand;
-        this(ParseResult cmd)
+        private ParseResult mLeftCommand;
+        private Nullable!ParseResult mRightCommand;
+
+        this(ParseResult lc, ParseResult rc)
         {
-            mCommand = cmd;
+            mLeftCommand = cast(ParseResult.Command) lc;
+            mRightCommand = rc;
         }
 
-        ParseResult command()
+        this(ParseResult lc)
         {
-            return mCommand;
+            mLeftCommand = lc;
+        }
+
+        ParseResult leftCommand()
+        {
+            return  mLeftCommand;
+        }
+
+        Nullable!ParseResult rightCommand()
+        {
+            return mRightCommand;
         }
 
         override void accept(Visitor v)
@@ -154,21 +173,26 @@ abstract class ParseResult
 
         override string toString()
         {
-            return "BackGround(left: " ~ mCommand.toString() ~ ")";
+            if (!mRightCommand.isNull) {
+                return "BackGround(left: " ~ mLeftCommand.toString()
+                    ~ ", right: " ~ mRightCommand.get().toString() ~ ")";
+            }
+            return "BackGround(left: " ~ mLeftCommand.toString() ~ ")";
         }
     }
 
     static class LRRedirection : ParseResult
     {
-        private Command mInput;
+        private ParseResult mInput;
         private ParseResult mOutput;
-        this(Command input, ParseResult output)
+
+        this(ParseResult input, ParseResult output)
         {
             mInput = input;
             mOutput = output;
         }
 
-        Command leftCommand()
+        ParseResult leftCommand()
         {
             return mInput;
         }
@@ -192,14 +216,15 @@ abstract class ParseResult
     static class RLRedirection : ParseResult
     {
         private ParseResult mOutput;
-        private Command mInput;
-        this(ParseResult output, Command input)
+        private ParseResult mInput;
+
+        this(ParseResult output, ParseResult input)
         {
             mOutput = output;
             mInput = input;
         }
 
-        Command leftCommand()
+        ParseResult leftCommand()
         {
             return mInput;
         }
@@ -222,20 +247,26 @@ abstract class ParseResult
 
     static class Sequence : ParseResult
     {
-        private Command mLeftCommand;
-        private ParseResult mRightCommand;
-        this(Command lc, ParseResult rc)
+        private ParseResult mLeftCommand;
+        private Nullable!ParseResult mRightCommand;
+
+        this(ParseResult lc, ParseResult rc)
         {
-            mLeftCommand = lc;
-            mRightCommand = rc;
+            mLeftCommand = cast(ParseResult.Command) lc;
+            mRightCommand = rc.nullable;
         }
 
-        Command leftCommand()
+        this(ParseResult lc)
+        {
+            mLeftCommand = cast(ParseResult.Command) lc;
+        }
+
+        ParseResult leftCommand()
         {
             return mLeftCommand;
         }
 
-        ParseResult rightCommand()
+        Nullable!ParseResult rightCommand()
         {
             return mRightCommand;
         }
@@ -247,8 +278,11 @@ abstract class ParseResult
 
         override string toString()
         {
-            return "Sequence(left: " ~ mLeftCommand.toString()
-                ~ ", right: " ~ mRightCommand.toString() ~ ")";
+            if (!mRightCommand.isNull) {
+                return "Sequence(left: " ~ mLeftCommand.toString() ~ ", right: " ~ mRightCommand.toString() ~ ")";
+            }
+
+            return "Sequence(left: " ~ mLeftCommand.toString() ~ ")";
         }
     }
 }
