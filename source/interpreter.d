@@ -8,22 +8,23 @@ import std.process;
 import std.stdio;
 import std.conv;
 import core.sys.posix.signal;
+import core.sys.posix.unistd;
 
 class Interpreter : Visitor
 {
     private ParseResult mParseResult;
-    private File mCurrStdin;
-    private File mCurrStdout;
-    private File mCurrStderr;
+    private int mCurrStdin;
+    private int mCurrStdout;
+    private int mCurrStderr;
     private int mCurrStatus;
     private bool mDetached;
     private pid_t mStartedPid;
     this(ParseResult result)
     {
         mParseResult = result;
-        mCurrStdin = stdin;
-        mCurrStdout = stdout;
-        mCurrStderr = stderr;
+        mCurrStdin = stdin.fileno();
+        mCurrStdout = stdout.fileno();
+        mCurrStderr = stderr.fileno();
         mCurrStatus = 0;
         mDetached = false;
     }
@@ -40,17 +41,24 @@ class Interpreter : Visitor
         if (!mDetached) mCurrStatus = psm.status();
     }
 
-    void visit(ParseResult.Pipe pipe)
+    void visit(ParseResult.Pipe pipeCommand)
     {
-        auto p = std.process.pipe();
+        int readEnd = 0;
+        int wrtiteEnd = 1;
+        int[2] p;
+        if (pipe(p) == -1) throw new Exception("Couldn't start a pipe");
+        scope (exit) {
+            close(p[readEnd]);
+            close(p[wrtiteEnd]);
+        }
 
-        mCurrStdout = p.writeEnd;
-        pipe.leftCommand().accept(this);
-        mCurrStdout = stdout;
+        mCurrStdout = p[wrtiteEnd];
+        pipeCommand.leftCommand().accept(this);
+        mCurrStdout = stdout.fileno();
         
-        mCurrStdin = p.readEnd;
-        pipe.rightCommand().accept(this);
-        mCurrStdin = stdin;
+        mCurrStdin = p[readEnd];
+        pipeCommand.rightCommand().accept(this);
+        mCurrStdin = stdin.fileno();
     }
 
     void visit(ParseResult.And andCommand)
@@ -80,10 +88,10 @@ class Interpreter : Visitor
             string name = command.processName();
             auto f = new File(name, "w");
             if (f !is null) {
-                mCurrStdout = *f;
+                mCurrStdout = (*f).fileno();
             }
             lrRedirection.leftCommand().accept(this);
-            mCurrStdout = stdout;
+            mCurrStdout = stdout.fileno();
         }
     }
 
@@ -93,10 +101,10 @@ class Interpreter : Visitor
             string name = command.processName();
             auto f = new File(name, "w");
             if (f !is null) {
-                mCurrStdout = *f;
+                mCurrStdout = (*f).fileno();
             }
             rlRedirection.rightCommand().accept(this);
-            mCurrStdout = stdout;
+            mCurrStdout = stdout.fileno();
         }
     }
 

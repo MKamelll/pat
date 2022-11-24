@@ -14,11 +14,11 @@ class ProcessManager
     private pid_t mStartedPid;
     private int mCurrStatus;
     private bool mDetached;
-    private File mCurrStdin;
-    private File mCurrStdout;
-    private File mCurrStderr;
+    private int mCurrStdin;
+    private int mCurrStdout;
+    private int mCurrStderr;
     this(ParseResult.Command command,
-        File stdIn, File stdOut, File stdErr, bool isDetached = false)
+        int stdIn, int stdOut, int stdErr, bool isDetached = false)
     {
         mCommand = command;
         mCurrStatus = 0;
@@ -43,14 +43,14 @@ class ProcessManager
         signal(SIGTTIN, SIG_IGN);
 
         if (cpid == 0) {
-            if (mCurrStdout != stdout) {
-                dup2(mCurrStdout.fileno(), STDOUT_FILENO);
-                close(mCurrStdout.fileno());
+            if (mCurrStdout != stdout.fileno()) {
+                dup2(mCurrStdout, STDOUT_FILENO);
+                close(mCurrStdout);
             }
 
-            if (mCurrStdin != stdin) {
-                dup2(mCurrStdin.fileno(), STDIN_FILENO);
-                close(mCurrStdin.fileno());
+            if (mCurrStdin != stdin.fileno()) {
+                dup2(mCurrStdin, STDIN_FILENO);
+                close(mCurrStdin);
             }
 
             setpgid(0, 0);
@@ -70,12 +70,12 @@ class ProcessManager
             mStartedPid = cpid;
         }
 
-        if (mCurrStdout != stdout) {
-            close(mCurrStdout.fileno());
+        if (mCurrStdout != stdout.fileno()) {
+            close(mCurrStdout);
         }
 
-        if (mCurrStdin != stdin) {
-            close(mCurrStdin.fileno());
+        if (mCurrStdin != stdin.fileno()) {
+            close(mCurrStdin);
         }
         
         setpgid(cpid, cpid);
