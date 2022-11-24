@@ -22,10 +22,12 @@ string getPrompt()
 {
     string userName;
     auto pipe = pipeProcess("whoami");
+    wait(pipe.pid);
     foreach (line; pipe.stdout.byLine) userName ~= line;
     
     string hostName;
     pipe = pipeProcess("hostname");
+    wait(pipe.pid);
     foreach (line; pipe.stdout.byLine) hostName ~= line;
     
     return userName ~ "@" ~ hostName;
@@ -33,12 +35,12 @@ string getPrompt()
 
 void main()
 {
-    string prompt = getPrompt();
+    string prompt = getPrompt() ~ "> ";
 
     while (true) {
 
         char * line;
-        if ((line = readLine(toStringz(prompt ~ "> "))) !is null) {
+        if ((line = readLine(toStringz(prompt))) !is null) {
             if (strcmp(line, "exit") == 0) { 
                 if (line !is null) free(line);
                 return;
