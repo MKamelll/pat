@@ -170,7 +170,7 @@ class Lexer
                 continue;
             }
             if (curr() == ' ') {
-                args ~= currArg;
+                if (currArg.length > 0) args ~= currArg;
                 currArg = "";
                 advance();
                 continue;
@@ -188,16 +188,20 @@ class Lexer
 
     string parseLiteral()
     {
-        // pass the opening "
-        advance();
         string result;
+
+        // pass the opening " or '
+        advance();
+        
         while (!isAtEnd()) {
-            if (curr() == '\"') break;
+            if (curr() == '"' || curr() == '\'') break;
             result ~= curr();
             advance();
         }
-        // pass the closing "
+        
+        // pass the closing " or '
         advance();
+        
         return result;
     }
 
