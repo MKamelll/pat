@@ -7,8 +7,11 @@ import processmanager;
 import std.process;
 import std.stdio;
 import std.conv;
+import std.string;
+
 import core.sys.posix.signal;
 import core.sys.posix.unistd;
+import core.sys.posix.stdio : fileno;
 
 class Interpreter : Visitor
 {
@@ -86,9 +89,10 @@ class Interpreter : Visitor
     {
         if (ParseResult.Command command = cast(ParseResult.Command) lrRedirection.rightCommand()) {
             string name = command.processName();
-            auto f = new File(name, "w");
-            if (f !is null) {
-                mCurrStdout = (*f).fileno();
+            FILE * fp = fopen(toStringz(name), "w");
+            scope (exit) fclose(fp);
+            if (fp !is null) {
+                mCurrStdout = fileno(fp);
             }
             lrRedirection.leftCommand().accept(this);
             mCurrStdout = stdout.fileno();
@@ -99,9 +103,10 @@ class Interpreter : Visitor
     {
         if (ParseResult.Command command = cast(ParseResult.Command) rlRedirection.leftCommand()) {
             string name = command.processName();
-            auto f = new File(name, "w");
-            if (f !is null) {
-                mCurrStdout = (*f).fileno();
+            FILE * fp = fopen(toStringz(name), "w");
+            scope (exit) fclose(fp);
+            if (fp !is null) {
+                mCurrStdout = fileno(fp);
             }
             rlRedirection.rightCommand().accept(this);
             mCurrStdout = stdout.fileno();
