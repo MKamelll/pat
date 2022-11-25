@@ -1,6 +1,7 @@
 module processmanager;
 
 import parseresult;
+import processconfig;
 
 import std.string;
 import std.stdio;
@@ -11,29 +12,15 @@ import core.stdc.errno;
 class ProcessManager
 {
     private ParseResult.Command mCommand;
-    private pid_t mStartedPid;
+    private ProcessConfig mProcessConfig;
     private int mCurrStatus;
-    private bool mDetached;
-    private int mCurrStdin;
-    private int mCurrStdout;
-    private int mCurrStderr;
-    this(ParseResult.Command command,
-        int stdIn, int stdOut, int stdErr, bool isDetached = false)
+    this(ParseResult.Command command, ProcessConfig psConfig)
     {
         mCommand = command;
-        mCurrStatus = 0;
-        mCurrStdin = stdIn;
-        mCurrStdout = stdOut;
-        mCurrStderr = stdErr;
-        mDetached = isDetached;
+        mProcessConfig = psConfig;
     }
 
-    int status()
-    {
-        return mCurrStatus;
-    }
-
-    int exec()
+    void exec()
     {
         pid_t ppid = getpid();
         pid_t cpid = fork();
@@ -43,18 +30,18 @@ class ProcessManager
         signal(SIGTTIN, SIG_IGN);
 
         if (cpid == 0) {
-            if (mCurrStdout != stdout.fileno()) {
-                dup2(mCurrStdout, STDOUT_FILENO);
-                close(mCurrStdout);
+            if (mProcessConfig.currStdout != stdout.fileno()) {
+                dup2(mProcessConfig.currStdout, STDOUT_FILENO);
+                close(mProcessConfig.currStdout);
             }
 
-            if (mCurrStdin != stdin.fileno()) {
-                dup2(mCurrStdin, STDIN_FILENO);
-                close(mCurrStdin);
+            if (mProcessConfig.currStdin != stdin.fileno()) {
+                dup2(mProcessConfig.currStdin, STDIN_FILENO);
+                close(mProcessConfig.currStdin);
             }
 
             setpgid(0, 0);
-            if (!mDetached) tcsetpgrp(0, getpid());
+            if (mProcessConfig.detached == ProcessConfig.Detached.NO) tcsetpgrp(0, getpid());
             auto psName = mCommand.processName().toStringz();
             immutable(char)*[] args;
             args ~= psName;
@@ -67,24 +54,26 @@ class ProcessManager
             perror(psName);
             _exit(errno());
         } else if (cpid > 0) {
-            mStartedPid = cpid;
+            mProcessConfig.setId(cpid);
         }
 
-        if (mCurrStdout != stdout.fileno()) {
-            close(mCurrStdout);
+        if (mProcessConfig.currStdout != stdout.fileno()) {
+            close(mProcessConfig.currStdout);
         }
 
-        if (mCurrStdin != stdin.fileno()) {
-            close(mCurrStdin);
+        if (mProcessConfig.currStdin != stdin.fileno()) {
+            close(mProcessConfig.currStdin);
         }
         
         setpgid(cpid, cpid);
-        if (!mDetached) tcsetpgrp(0, cpid);
+        if (mProcessConfig.detached == ProcessConfig.Detached.NO) tcsetpgrp(0, cpid);
 
-        if (!mDetached) waitpid(cpid, &mCurrStatus, 0);
+        if (mProcessConfig.detached == ProcessConfig.Detached.NO) 
+        {
+            waitpid(cpid, &mCurrStatus, 0);
+            mProcessConfig.setCurrStatus(mCurrStatus);
+        }
 
-        if (!mDetached) tcsetpgrp(0, ppid);
-        
-        return mStartedPid;
+        if (mProcessConfig.detached == ProcessConfig.Detached.NO) tcsetpgrp(0, ppid);
     }
 }

@@ -3,6 +3,7 @@ module interpreter;
 import parseresult : ParseResult;
 import visitor;
 import processmanager;
+import processconfig;
 
 import std.process;
 import std.stdio;
@@ -16,20 +17,16 @@ import core.sys.posix.stdio : fileno;
 class Interpreter : Visitor
 {
     private ParseResult mParseResult;
-    private int mCurrStdin;
-    private int mCurrStdout;
-    private int mCurrStderr;
-    private int mCurrStatus;
-    private bool mDetached;
-    private pid_t mStartedPid;
+    private ProcessConfig mProcessConfig;
     this(ParseResult result)
     {
         mParseResult = result;
-        mCurrStdin = stdin.fileno();
-        mCurrStdout = stdout.fileno();
-        mCurrStderr = stderr.fileno();
-        mCurrStatus = 0;
-        mDetached = false;
+        mProcessConfig = new ProcessConfig();
+        mProcessConfig.setCurrStdin(stdin.fileno());
+        mProcessConfig.setCurrStdout(stdout.fileno());
+        mProcessConfig.setCurrStderr(stderr.fileno());
+        mProcessConfig.setDetached(ProcessConfig.Detached.NO);
+        mProcessConfig.setPipe(ProcessConfig.Pipe.NO);
     }
 
     void interpret()
@@ -39,9 +36,8 @@ class Interpreter : Visitor
 
     void visit(ParseResult.Command command)
     {
-        auto psm = new ProcessManager(command, mCurrStdin, mCurrStdout, mCurrStderr, mDetached);
-        mStartedPid = psm.exec();
-        if (!mDetached) mCurrStatus = psm.status();
+        auto psm = new ProcessManager(command, mProcessConfig);
+        psm.exec();
     }
 
     void visit(ParseResult.Pipe pipeCommand)
@@ -55,34 +51,36 @@ class Interpreter : Visitor
             close(p[wrtiteEnd]);
         }
 
-        mCurrStdout = p[wrtiteEnd];
+        mProcessConfig.setCurrStdout(p[wrtiteEnd]);
         pipeCommand.leftCommand().accept(this);
-        mCurrStdout = stdout.fileno();
+        mProcessConfig.setCurrStdout(stdout.fileno());
         
-        mCurrStdin = p[readEnd];
+        mProcessConfig.setCurrStdin(p[readEnd]);
         pipeCommand.rightCommand().accept(this);
-        mCurrStdin = stdin.fileno();
+        mProcessConfig.setCurrStdin(stdin.fileno());
     }
 
     void visit(ParseResult.And andCommand)
     {
         andCommand.leftCommand().accept(this);
-        if (mCurrStatus == 0) andCommand.rightCommand().accept(this);
+        if (mProcessConfig.currStatus == 0) andCommand.rightCommand().accept(this);
     }
 
     void visit(ParseResult.BackGroundProcess command)
     {
-        mDetached = true;
+        mProcessConfig.setDetached(ProcessConfig.Detached.YES);
         command.leftCommand().accept(this);
-        writeln("Started '" ~ to!string(mStartedPid) ~ "' in the background");
-        mDetached = false;
+        
+        writeln("Started '" ~ to!string(mProcessConfig.id) ~ "' in the background");
+        
+        mProcessConfig.setDetached(ProcessConfig.Detached.NO);
         if (!command.rightCommand().isNull) command.rightCommand().get().accept(this);
     }
 
     void visit(ParseResult.Or orCommand)
     {
         orCommand.leftCommand().accept(this);
-        if (mCurrStatus != 0) orCommand.rightCommand().accept(this);
+        if (mProcessConfig.currStatus != 0) orCommand.rightCommand().accept(this);
     }
     
     void visit(ParseResult.LRRedirection lrRedirection)
@@ -92,10 +90,10 @@ class Interpreter : Visitor
             FILE * fp = fopen(toStringz(name), "w");
             scope (exit) fclose(fp);
             if (fp !is null) {
-                mCurrStdout = fileno(fp);
+                mProcessConfig.setCurrStdout(fileno(fp));
             }
             lrRedirection.leftCommand().accept(this);
-            mCurrStdout = stdout.fileno();
+            mProcessConfig.setCurrStdout(stdout.fileno());
         }
     }
 
@@ -106,10 +104,10 @@ class Interpreter : Visitor
             FILE * fp = fopen(toStringz(name), "w");
             scope (exit) fclose(fp);
             if (fp !is null) {
-                mCurrStdout = fileno(fp);
+                mProcessConfig.setCurrStdout(fileno(fp));
             }
             rlRedirection.rightCommand().accept(this);
-            mCurrStdout = stdout.fileno();
+            mProcessConfig.setCurrStdout(stdout.fileno());
         }
     }
 
