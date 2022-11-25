@@ -166,7 +166,7 @@ class Lexer
         string currArg;
         while (!isAtEnd()) {
             if (curr() == '\'' || curr() == '"') {
-                advance();
+                args ~= parseLiteral();
                 continue;
             }
             if (curr() == ' ') {
@@ -184,6 +184,21 @@ class Lexer
         if (currArg.length > 0) args ~= currArg;
 
         if (psName.length > 0) mTokens ~= new Token(TokenType.COMMAND, psName, args);
+    }
+
+    string parseLiteral()
+    {
+        // pass the opening "
+        advance();
+        string result;
+        while (!isAtEnd()) {
+            if (curr() == '\"') break;
+            result ~= curr();
+            advance();
+        }
+        // pass the closing "
+        advance();
+        return result;
     }
 
 }
