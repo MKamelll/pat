@@ -1,6 +1,9 @@
 module processconfig;
 
 import core.sys.posix.unistd;
+import std.algorithm;
+
+private pid_t[] mBgProcesses = [];
 
 class ProcessConfig
 {
@@ -50,6 +53,21 @@ class ProcessConfig
         mCurrStatus = currStatus;
     }
 
+    void addBackgroundProcess(pid_t pid)
+    {
+        mBgProcesses ~= pid;
+    }
+
+    void removeBackgroundProcess(ulong index)
+    {
+        mBgProcesses.remove(index);
+    }
+
+    bool findBackgroundProcess(pid_t pid)
+    {
+        return mBgProcesses.canFind(pid);
+    }
+
     ///////////////////////////////////////
 
     pid_t id()
@@ -85,5 +103,10 @@ class ProcessConfig
     int currStatus()
     {
         return mCurrStatus;
+    }
+
+    pid_t[] bgProcesses()
+    {
+        return mBgProcesses;
     }
 }

@@ -5,6 +5,8 @@ import processconfig;
 
 import std.string;
 import std.stdio;
+import std.conv;
+import std.algorithm;
 import core.sys.posix.unistd;
 import core.sys.posix.sys.wait;
 import core.stdc.errno;
@@ -28,6 +30,9 @@ class ProcessManager
         
         signal(SIGTTOU, SIG_IGN);
         signal(SIGTTIN, SIG_IGN);
+
+        if (cpid > 0 && mProcessConfig.detached == ProcessConfig.Detached.YES)
+            mProcessConfig.addBackgroundProcess(cpid);
 
         if (cpid == 0) {
             if (mProcessConfig.currStdout != stdout.fileno()) {
@@ -96,5 +101,13 @@ class ProcessManager
         }
 
         if (mProcessConfig.detached == ProcessConfig.Detached.NO) tcsetpgrp(0, ppid);
+    }
+
+    void cleanDeadProcesses()
+    {
+        int status;
+        pid_t result = waitpid(-1, &status, WNOHANG);
+        if (result > 0 && mProcessConfig.findBackgroundProcess(result))
+            writeln("Process '" ~ to!string(result) ~ "' exited with " ~ to!string(status));
     }
 }

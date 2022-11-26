@@ -38,6 +38,7 @@ class Interpreter : Visitor
     {
         auto psm = new ProcessManager(command, mProcessConfig);
         psm.exec();
+        psm.cleanDeadProcesses();
     }
 
     void visit(ParseResult.Pipe pipeCommand)
