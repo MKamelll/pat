@@ -55,9 +55,11 @@ class Interpreter : Visitor
         pipeCommand.leftCommand().accept(this);
         mProcessConfig.setCurrStdout(stdout.fileno());
         
+        mProcessConfig.setPipe(ProcessConfig.Pipe.YES);
         mProcessConfig.setCurrStdin(p[readEnd]);
         pipeCommand.rightCommand().accept(this);
         mProcessConfig.setCurrStdin(stdin.fileno());
+        mProcessConfig.setPipe(ProcessConfig.Pipe.NO);
     }
 
     void visit(ParseResult.And andCommand)

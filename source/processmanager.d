@@ -40,8 +40,18 @@ class ProcessManager
                 close(mProcessConfig.currStdin);
             }
 
-            setpgid(0, 0);
-            if (mProcessConfig.detached == ProcessConfig.Detached.NO) tcsetpgrp(0, getpid());
+            if (mProcessConfig.pipe == mProcessConfig.Pipe.NO) {
+                setpgid(0, 0);
+            } else {
+                setpgid(0, mProcessConfig.id);
+            }
+            if (mProcessConfig.detached == ProcessConfig.Detached.NO) {
+                if (mProcessConfig.pipe == mProcessConfig.Pipe.NO) {
+                    tcsetpgrp(0, getpid());
+                } else {
+                    tcsetpgrp(0, mProcessConfig.id);
+                }
+            }
             auto psName = mCommand.processName().toStringz();
             immutable(char)*[] args;
             args ~= psName;
@@ -53,9 +63,9 @@ class ProcessManager
             execvp(psName, args.ptr);
             perror(psName);
             _exit(errno());
-        } else if (cpid > 0) {
-            mProcessConfig.setId(cpid);
         }
+
+        if (cpid > 0 && mProcessConfig.pipe == ProcessConfig.Pipe.NO) mProcessConfig.setId(cpid);
 
         if (mProcessConfig.currStdout != stdout.fileno()) {
             close(mProcessConfig.currStdout);
@@ -64,9 +74,20 @@ class ProcessManager
         if (mProcessConfig.currStdin != stdin.fileno()) {
             close(mProcessConfig.currStdin);
         }
-        
-        setpgid(cpid, cpid);
-        if (mProcessConfig.detached == ProcessConfig.Detached.NO) tcsetpgrp(0, cpid);
+
+        if (mProcessConfig.pipe == ProcessConfig.Pipe.NO) {
+            setpgid(cpid, cpid);
+        } else {
+            setpgid(cpid, mProcessConfig.id);
+        }
+
+        if (mProcessConfig.detached == ProcessConfig.Detached.NO) {
+            if (mProcessConfig.pipe == ProcessConfig.Pipe.NO) {
+                tcsetpgrp(0, cpid);
+            } else {
+                tcsetpgrp(0, mProcessConfig.id);
+            }
+        }
 
         if (mProcessConfig.detached == ProcessConfig.Detached.NO) 
         {
